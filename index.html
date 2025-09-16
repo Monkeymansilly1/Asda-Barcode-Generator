@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ASDA Code 128 Generator</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      max-width: 900px;
+      margin: 28px auto;
+      padding: 0 18px;
+      background-color: #78BE20;
+      color: #000;
+      text-align: center;
+    }
+    header img {
+      max-width: 220px;
+      margin-bottom: 20px;
+    }
+    input[type=text] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 2px solid #000;
+      border-radius: 6px;
+      background: #fff;
+      color: #000;
+      margin-bottom: 12px;
+    }
+    input::placeholder {
+      color: #555;
+    }
+    button {
+      margin-top: 12px;
+      padding: 10px 16px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid #000;
+      background: #78BE20;
+      color: #000;
+      cursor: pointer;
+      transition: background 0.3s, color 0.3s;
+    }
+    button:hover {
+      background: #000;
+      color: #78BE20;
+    }
+    #result {
+      margin-top: 18px;
+      padding: 14px;
+      border: 2px dashed #000;
+      border-radius: 8px;
+      background: #fff;
+      color: #000;
+    }
+    .error {
+      color: #a00;
+    }
+    svg {
+      background: #fff;
+      padding: 6px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- Replace with your own asda-logo.svg if you want the official logo -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" style="max-width:200px; height:auto;">
+      <text x="0" y="35" font-size="35" font-weight="bold" fill="#78BE20">ASDA</text>
+    </svg>
+  </header>
+  <h1>Code 128 Generator</h1>
+
+  <label for="ean">EAN‑13 barcode (13 digits)</label>
+  <input id="ean" type="text" inputmode="numeric" maxlength="13" placeholder="e.g. 0123456789012">
+
+  <label for="serial">Serial / suffix (numeric)</label>
+  <input id="serial" type="text" inputmode="numeric" maxlength="20" placeholder="optional, default 000001196">
+
+  <button id="generate">Generate Code 128</button>
+
+  <div id="result" hidden>
+    <div id="textOut"></div>
+    <svg id="barcode"></svg>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script>
+    function luhnCheckDigit(numberString){
+      const digits = numberString.replace(/\D/g,'').split('').reverse().map(d=>parseInt(d,10));
+      let sum = 0;
+      for(let i=0;i<digits.length;i++){
+        let d = digits[i];
+        if(i % 2 === 0){
+          d = d * 2;
+          if(d > 9) d -= 9;
+        }
+        sum += d;
+      }
+      const mod = sum % 10;
+      const check = (mod === 0) ? 0 : (10 - mod);
+      return String(check);
+    }
+
+    function isDigits(s){return /^\d+$/.test(s)}
+
+    document.getElementById('generate').addEventListener('click', ()=>{
+      const ean = document.getElementById('ean').value.trim();
+      let serial = document.getElementById('serial').value.trim();
+      const out = document.getElementById('textOut');
+      const result = document.getElementById('result');
+
+      if(ean.length !== 13 || !isDigits(ean)){
+        out.innerHTML = '<div class="error">Please enter a valid 13-digit EAN-13 barcode (digits only).</div>';
+        result.hidden = false;
+        return;
+      }
+      if(serial === '') serial = '000001196';
+      if(!isDigits(serial)){
+        out.innerHTML = '<div class="error">Serial must be numeric (digits only).</div>';
+        result.hidden = false;
+        return;
+      }
+
+      const prefix = '510';
+      const base = prefix + ean + serial;
+      const checkDigit = luhnCheckDigit(base);
+      const finalPayload = base + checkDigit;
+
+      out.innerHTML = '<strong>Payload for Code128:</strong> <code>' + finalPayload + '</code>';
+
+      try{
+        JsBarcode('#barcode', finalPayload, {
+          format: 'CODE128',
+          displayValue: true,
+          fontSize: 16,
+          height: 80,
+          lineColor: "#000",
+          background: "#fff"
+        });
+      }catch(e){
+        out.innerText = 'Failed to render barcode: ' + e.message;
+      }
+      result.hidden = false;
+    });
+  </script>
+</body>
+</html>
