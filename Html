@@ -1,191 +1,148 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sainsbury's Barcode Generator</title>
-<style>
-body {
-font-family: Arial, sans-serif;
-background-color: #f47738;
-color: #fff;
-padding: 2rem;
-text-align: center;
-position: relative;
-background-image:
-repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 20px),
-repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 20px);
-}
-
-.watermark {
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-pointer-events: none;
-z-index: 0;
-opacity: 0.4;
-}
-
-.watermark span {
-position: absolute;
-color: rgba(255, 255, 255, 0.4);
-font-size: 2rem;
-font-weight: bold;
-transform: rotate(-30deg);
-white-space: nowrap;
-}
-
-.container {
-position: relative;
-z-index: 1;
-background: #fff;
-color: #333;
-padding: 2rem;
-border-radius: 1rem;
-max-width: 500px;
-margin: 0 auto;
-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-input, button {
-padding: 0.5rem;
-font-size: 1rem;
-margin: 0.5rem 0;
-width: 100%;
-}
-
-canvas {
-margin-top: 1rem;
-background: #fff;
-}
-
-.link-under-canvas {
-margin-top: 0.5rem;
-font-size: 0.9rem;
-}
-
-.link-under-canvas a {
-color: #f47738;
-text-decoration: none;
-font-weight: bold;
-}
-
-.note {
-color: #c00;
-font-weight: bold;
-margin-top: 0.5rem;
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Code 128 Generator (Black on Green)</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      max-width: 900px;
+      margin: 28px auto;
+      padding: 0 18px;
+      background-color: #0f0;
+      color: #000;
+    }
+    h1, label, p, pre, code {
+      color: #000;
+    }
+    input[type=text] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 2px solid #000;
+      border-radius: 6px;
+      background: #0f0;
+      color: #000;
+    }
+    input::placeholder {
+      color: #0008;
+    }
+    button {
+      margin-top: 12px;
+      padding: 10px 16px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid #000;
+      background: #0f0;
+      color: #000;
+      cursor: pointer;
+      transition: background 0.3s, color 0.3s;
+    }
+    button:hover {
+      background: #000;
+      color: #0f0;
+    }
+    #result {
+      margin-top: 18px;
+      padding: 14px;
+      border: 2px dashed #000;
+      border-radius: 8px;
+      background: #0f0;
+      color: #000;
+    }
+    .error {
+      color: #a00;
+    }
+    svg {
+      background: #0f0;
+      padding: 6px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-<div class="watermark" id="watermark"></div>
+  <h1>Code 128 generator</h1>
+  <p>Enter an <strong>EAN-13</strong> barcode and an optional serial / suffix. The generator will build the payload as:</p>
+  <pre>510 + <EAN-13> + <serial> + <Luhn check digit of the whole number so far></pre>
+  <p>Example format: <code>510<ean-13>0000011960</code></p>
 
-<div class="container">
-<h1>Sainsbury's Barcode Generator</h1>
-<input
-type="text"
-id="productCode"
-placeholder="Enter original product barcode"
-maxlength="13"
-pattern="\d*"
-inputmode="numeric"
-oninput="this.value=this.value.replace(/\D/g,'').slice(0,13)"
-onpaste="setTimeout(() => this.value = this.value.replace(/\D/g,'').slice(0,13), 0)"
->
-<input type="number" id="price" placeholder="Enter price (e.g., 100 = £1.00)" min="10" max="9999">
-<button onclick="generateBarcode()">Generate Barcode</button>
-<div class="note">most 10p barcodes are patched</div>
-<canvas id="barcodeCanvas"></canvas>
-<div class="link-under-canvas">
-<a href="https://discord.gg/MNE9v5bStA" target="_blank">https://discord.gg/MNE9v5bStA</a>
-</div>
-<a id="downloadLink" download="barcode.png">
-<button>Download as PNG</button>
-</a>
-</div>
+  <label for="ean">EAN‑13 barcode (13 digits)</label>
+  <input id="ean" type="text" inputmode="numeric" maxlength="13" placeholder="e.g. 0123456789012">
 
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-<script>
-function padLeft(str, length) {
-return str.toString().padStart(length, '0');
-}
+  <label for="serial">Serial / suffix (numeric) — default: <code>000001196</code></label>
+  <input id="serial" type="text" inputmode="numeric" maxlength="20" placeholder="optional, default 000001196">
 
-function calculateCheckDigit(input) {
-let sum = 0;
-for (let i = 0; i < input.length; i++) {
-const digit = parseInt(input[input.length - 1 - i], 10);
-const weight = (i % 2 === 0) ? 3 : 1;
-sum += digit * weight;
-}
-let checkDigit = (10 - (sum % 10)) % 10;
+  <button id="generate">Generate Code 128</button>
 
-// If even, increase by 1 to make it odd
-if (checkDigit % 2 === 0) {
-checkDigit = (checkDigit + 1) % 10;
-}
+  <div id="result" hidden>
+    <div id="textOut"></div>
+    <svg id="barcode"></svg>
+    <div id="notes" style="margin-top:8px;font-size:13px;color:#000"></div>
+  </div>
 
-return checkDigit;
-}
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script>
+    function luhnCheckDigit(numberString){
+      const digits = numberString.replace(/\D/g,'').split('').reverse().map(d=>parseInt(d,10));
+      let sum = 0;
+      for(let i=0;i<digits.length;i++){
+        let d = digits[i];
+        if(i % 2 === 0){
+          d = d * 2;
+          if(d > 9) d -= 9;
+        }
+        sum += d;
+      }
+      const mod = sum % 10;
+      const check = (mod === 0) ? 0 : (10 - mod);
+      return String(check);
+    }
 
-function generateBarcode() {
-const productInput = document.getElementById('productCode').value;
-const priceInput = parseInt(document.getElementById('price').value);
+    function isDigits(s){return /^\d+$/.test(s)}
 
-if (isNaN(priceInput) || priceInput < 10 || priceInput > 9999) {
-alert("Price must be between 10 and 9999 (e.g., 100 = £1.00)");
-return;
-}
+    document.getElementById('generate').addEventListener('click', ()=>{
+      const ean = document.getElementById('ean').value.trim();
+      let serial = document.getElementById('serial').value.trim();
+      const out = document.getElementById('textOut');
+      const notes = document.getElementById('notes');
+      const result = document.getElementById('result');
 
-const numericProduct = productInput.replace(/\D/g, '');
-let productDigits = numericProduct;
+      if(ean.length !== 13 || !isDigits(ean)){
+        out.innerHTML = '<div class="error">Please enter a valid 13-digit EAN-13 barcode (digits only).</div>';
+        result.hidden = false;
+        return;
+      }
+      if(serial === '') serial = '000001196';
+      if(!isDigits(serial)){
+        out.innerHTML = '<div class="error">Serial must be numeric (digits only).</div>';
+        result.hidden = false;
+        return;
+      }
 
-if (productDigits.length === 14) {
-productDigits = productDigits.slice(0, -1);
-}
-productDigits = padLeft(productDigits, 13);
+      const prefix = '510';
+      const base = prefix + ean + serial;
+      const checkDigit = luhnCheckDigit(base);
+      const finalPayload = base + checkDigit;
 
-const paddedPrice = padLeft(priceInput, 6);
-const baseNumber = `91${productDigits}${paddedPrice}`;
-const checkDigit = calculateCheckDigit(baseNumber);
-const fullBarcode = `${baseNumber}${checkDigit}`;
+      out.innerHTML = '<strong>Payload for Code128:</strong> <code>' + finalPayload + '</code>';
+      notes.innerHTML = 'Built as: <code>' + prefix + '</code> + EAN‑13 + serial + Luhn check digit.';
 
-const canvas = document.getElementById("barcodeCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = 600;
-canvas.height = 200;
-
-JsBarcode(canvas, fullBarcode, {
-format: "CODE128",
-displayValue: true,
-fontSize: 18,
-width: 2,
-height: 100,
-margin: 10
-});
-
-ctx.font = "16px Arial";
-ctx.fillStyle = "black";
-ctx.textAlign = "center";
-ctx.fillText("hi", canvas.width / 2, 190);
-
-const downloadLink = document.getElementById("downloadLink");
-downloadLink.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-}
-
-const watermarkDiv = document.getElementById('watermark');
-const rows = 10;
-const cols = 10;
-for (let y = 0; y < rows; y++) {
-for (let x = 0; x < cols; x++) {
-const span = document.createElement('span');
-span.innerText = 'RYAN';
-span.style.top = `${y * 100}px`;
-span.style.left = `${x * 200}px`;
-watermarkDiv.appendChild(span);
-}
-}
-</script>
+      try{
+        JsBarcode('#barcode', finalPayload, {
+          format: 'CODE128',
+          displayValue: true,
+          fontSize: 16,
+          height: 80,
+          lineColor: "#000",
+          background: "#0f0"
+        });
+      }catch(e){
+        notes.innerText = 'Failed to render barcode: ' + e.message;
+      }
+      result.hidden = false;
+    });
+  </script>
 </body>
 </html>
