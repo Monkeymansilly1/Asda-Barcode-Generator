@@ -1,35 +1,33 @@
 <!doctype html>
+
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ASDA Code 128 Generator</title>
+  <title>Asda Generator (Black on Green) — Locked</title>
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       max-width: 900px;
       margin: 28px auto;
       padding: 0 18px;
-      background-color: #78BE20;
+      background-color: #0f0;
       color: #000;
-      text-align: center;
     }
-    header img {
-      max-width: 220px;
-      margin-bottom: 20px;
+    h1, label, p, pre, code {
+      color: #000;
     }
-    input[type=text] {
+    input[type=text], input[type=password] {
       width: 100%;
       padding: 10px;
       font-size: 16px;
       border: 2px solid #000;
       border-radius: 6px;
-      background: #fff;
+      background: #0f0;
       color: #000;
-      margin-bottom: 12px;
     }
     input::placeholder {
-      color: #555;
+      color: #0008;
     }
     button {
       margin-top: 12px;
@@ -37,58 +35,91 @@
       font-size: 16px;
       border-radius: 8px;
       border: 2px solid #000;
-      background: #78BE20;
+      background: #0f0;
       color: #000;
       cursor: pointer;
       transition: background 0.3s, color 0.3s;
     }
     button:hover {
       background: #000;
-      color: #78BE20;
+      color: #0f0;
     }
     #result {
       margin-top: 18px;
       padding: 14px;
       border: 2px dashed #000;
       border-radius: 8px;
-      background: #fff;
+      background: #0f0;
       color: #000;
     }
     .error {
       color: #a00;
     }
     svg {
-      background: #fff;
+      background: #0f0;
       padding: 6px;
       border-radius: 6px;
       margin-top: 10px;
-    }
+    }/* simple lock overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  z-index: 9999;
+}
+.locker {
+  background: #0f0;
+  color: #000;
+  border: 3px solid #000;
+  padding: 18px;
+  width: 92%;
+  max-width: 420px;
+  border-radius: 10px;
+  text-align: left;
+}
+.locker h2 { margin: 0 0 8px 0; }
+.locker .hint { font-size: 13px; color: #0008; margin-top:6px }
+.hidden { display: none !important; }
+
   </style>
 </head>
 <body>
-  <header>
-    <!-- Replace with your own asda-logo.svg if you want the official logo -->
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" style="max-width:200px; height:auto;">
-      <text x="0" y="35" font-size="35" font-weight="bold" fill="#78BE20">ASDA</text>
-    </svg>
-  </header>
-  <h1>Code 128 Generator</h1>
+  <h1>Code 128 generator</h1>
+  <p>Enter an <strong>EAN-13</strong> barcode and an optional serial / suffix. The generator will build the payload as:</p>
+  <pre>510 + &lt;EAN-13&gt; + &lt;serial&gt; + &lt;Luhn check digit of the whole number so far&gt;</pre>
+  <p>Example format: <code>510&lt;ean-13&gt;0000011960</code></p>  <!-- LOCK OVERLAY -->  <div id="lockOverlay" class="overlay" aria-hidden="false" role="dialog">
+    <div class="locker" role="document">
+      <h2>Unlock generator</h2>
+      <p>Enter the unlock key to use this generator.</p>
+      <label for="unlockKey">Key</label>
+      <input id="unlockKey" type="password" placeholder="Enter key">
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button id="unlockBtn">Unlock</button>
+        <button id="cancelBtn" type="button">Cancel</button>
+      </div>
+      <div id="unlockMsg" class="error" style="margin-top:10px;display:none"></div>
+      <div class="hint">If you already know the key, type it and press Unlock. (Case-sensitive)</div>
+    </div>
+  </div><label for="ean">EAN‑13 barcode (13 digits)</label> <input id="ean" type="text" inputmode="numeric" maxlength="13" placeholder="e.g. 0123456789012" disabled>
 
-  <label for="ean">EAN‑13 barcode (13 digits)</label>
-  <input id="ean" type="text" inputmode="numeric" maxlength="13" placeholder="e.g. 0123456789012">
+<label for="serial">Serial / suffix (numeric) — default: <code>000001196</code></label> <input id="serial" type="text" inputmode="numeric" maxlength="20" placeholder="optional, default 000001196" disabled>
 
-  <label for="serial">Serial / suffix (numeric)</label>
-  <input id="serial" type="text" inputmode="numeric" maxlength="20" placeholder="optional, default 000001196">
-
-  <button id="generate">Generate Code 128</button>
+<button id="generate" disabled>Generate Code 128</button>
 
   <div id="result" hidden>
     <div id="textOut"></div>
     <svg id="barcode"></svg>
-  </div>
+    <div id="notes" style="margin-top:8px;font-size:13px;color:#000"></div>
+  </div>  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>  <script>
+    // ----- CONFIG: unlock key (client-side) -----
+    // The unlock key is case-sensitive. You provided: Asdafan123
+    const UNLOCK_KEY = 'Asdafan123';
+    const STORAGE_KEY = 'code128_gen_unlocked_v1';
 
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script>
+    // ----- small helpers -----
     function luhnCheckDigit(numberString){
       const digits = numberString.replace(/\D/g,'').split('').reverse().map(d=>parseInt(d,10));
       let sum = 0;
@@ -104,14 +135,68 @@
       const check = (mod === 0) ? 0 : (10 - mod);
       return String(check);
     }
-
     function isDigits(s){return /^\d+$/.test(s)}
 
+    // ----- elements -----
+    const lockOverlay = document.getElementById('lockOverlay');
+    const unlockKeyInput = document.getElementById('unlockKey');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const unlockMsg = document.getElementById('unlockMsg');
+
+    const eanInput = document.getElementById('ean');
+    const serialInput = document.getElementById('serial');
+    const generateBtn = document.getElementById('generate');
+    const out = document.getElementById('textOut');
+    const notes = document.getElementById('notes');
+    const result = document.getElementById('result');
+
+    // enable or disable the main inputs depending on unlocked state
+    function setUnlocked(unlocked){
+      eanInput.disabled = !unlocked;
+      serialInput.disabled = !unlocked;
+      generateBtn.disabled = !unlocked;
+      lockOverlay.style.display = unlocked ? 'none' : 'flex';
+      lockOverlay.setAttribute('aria-hidden', unlocked ? 'true' : 'false');
+    }
+
+    // check localStorage for previous unlock
+    try{
+      const was = localStorage.getItem(STORAGE_KEY);
+      if(was === '1'){
+        setUnlocked(true);
+      }
+    }catch(e){ /* ignore storage errors */ }
+
+    // Unlock handler
+    function tryUnlock(){
+      const val = unlockKeyInput.value || '';
+      unlockMsg.style.display = 'none';
+      if(val === UNLOCK_KEY){
+        try{ localStorage.setItem(STORAGE_KEY, '1'); }catch(e){}
+        setUnlocked(true);
+      }else{
+        unlockMsg.style.display = 'block';
+        unlockMsg.textContent = 'Invalid key. Try again.';
+        unlockKeyInput.value = '';
+        unlockKeyInput.focus();
+      }
+    }
+
+    unlockBtn.addEventListener('click', tryUnlock);
+    unlockKeyInput.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter') tryUnlock();
+    });
+
+    cancelBtn.addEventListener('click', ()=>{
+      // hide overlay but keep it locked (user might want to view page without generating)
+      lockOverlay.style.display = 'none';
+    });
+
+    // Generate button
     document.getElementById('generate').addEventListener('click', ()=>{
-      const ean = document.getElementById('ean').value.trim();
-      let serial = document.getElementById('serial').value.trim();
-      const out = document.getElementById('textOut');
-      const result = document.getElementById('result');
+      const ean = eanInput.value.trim();
+      let serial = serialInput.value.trim();
 
       if(ean.length !== 13 || !isDigits(ean)){
         out.innerHTML = '<div class="error">Please enter a valid 13-digit EAN-13 barcode (digits only).</div>';
@@ -131,6 +216,7 @@
       const finalPayload = base + checkDigit;
 
       out.innerHTML = '<strong>Payload for Code128:</strong> <code>' + finalPayload + '</code>';
+      notes.innerHTML = 'Built as: <code>' + prefix + '</code> + EAN‑13 + serial + Luhn check digit.';
 
       try{
         JsBarcode('#barcode', finalPayload, {
@@ -139,13 +225,12 @@
           fontSize: 16,
           height: 80,
           lineColor: "#000",
-          background: "#fff"
+          background: "#0f0"
         });
       }catch(e){
-        out.innerText = 'Failed to render barcode: ' + e.message;
+        notes.innerText = 'Failed to render barcode: ' + e.message;
       }
       result.hidden = false;
     });
-  </script>
-</body>
-</html>
+  </script></body>
+  </html>
