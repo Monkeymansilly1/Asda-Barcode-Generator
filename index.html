@@ -28,9 +28,7 @@
       color: #000;
       margin-bottom: 12px;
     }
-    input::placeholder {
-      color: #555;
-    }
+    input::placeholder { color: #555; }
     button {
       margin-top: 12px;
       padding: 10px 16px;
@@ -42,10 +40,7 @@
       cursor: pointer;
       transition: background 0.3s, color 0.3s;
     }
-    button:hover {
-      background: #000;
-      color: #78BE20;
-    }
+    button:hover { background: #000; color: #78BE20; }
     #result {
       margin-top: 18px;
       padding: 14px;
@@ -54,9 +49,7 @@
       background: #fff;
       color: #000;
     }
-    .error {
-      color: #a00;
-    }
+    .error { color: #a00; }
     svg {
       background: #fff;
       padding: 6px;
@@ -84,15 +77,14 @@
     }
     .locker h2 { margin: 0 0 8px 0; }
     .locker .hint { font-size: 13px; color: #0008; margin-top:6px }
-    .hidden { display: none !important; }
   </style>
 </head>
 <body>
- <header>
-  <img src="Asda-Logo.png" 
-       alt="ASDA Logo" 
-       style="max-width:220px; height:auto; margin-bottom:20px; background:#fff; padding:10px; border-radius:8px;">
-</header>
+  <header>
+    <img src="Asda-Logo.png" 
+         alt="ASDA Logo" 
+         style="max-width:220px; height:auto; margin-bottom:20px; background:#fff; padding:10px; border-radius:8px;">
+  </header>
 
   <h1>Asda 1p Generator</h1>
 
@@ -126,7 +118,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script 
+  <script>
+    // SHA-256 hash of "asdafan123"
     const PASSWORD_HASH = "c791ad9c2c1a41ed069ad318f8c899b1af275cd329d3df2e0e3053701a3b19fc";
     const STORAGE_KEY = 'asda_code128_unlocked';
 
@@ -174,28 +167,24 @@
       lockOverlay.setAttribute('aria-hidden', unlocked ? 'true' : 'false');
     }
 
-    try{
+    try {
       const was = localStorage.getItem(STORAGE_KEY);
-      if(was === '1'){
-        setUnlocked(true);
-      }
-    }catch(e){}
+      if(was === '1'){ setUnlocked(true); }
+    } catch(e){}
 
     async function tryUnlock(){
       const val = unlockKeyInput.value || '';
       unlockMsg.style.display = 'none';
-
       if(val.length < 8){
         unlockMsg.style.display = 'block';
         unlockMsg.textContent = 'Key must be at least 8 characters.';
         return;
       }
-
       const got = await sha256hex(val);
       if(got === PASSWORD_HASH){
         try{ localStorage.setItem(STORAGE_KEY, '1'); }catch(e){}
         setUnlocked(true);
-      }else{
+      } else {
         unlockMsg.style.display = 'block';
         unlockMsg.textContent = 'Invalid key. Try again.';
         unlockKeyInput.value = '';
@@ -204,13 +193,8 @@
     }
 
     unlockBtn.addEventListener('click', tryUnlock);
-    unlockKeyInput.addEventListener('keydown', (ev)=>{
-      if(ev.key === 'Enter') tryUnlock();
-    });
-
-    cancelBtn.addEventListener('click', ()=>{
-      lockOverlay.style.display = 'none';
-    });
+    unlockKeyInput.addEventListener('keydown', (ev)=>{ if(ev.key === 'Enter') tryUnlock(); });
+    cancelBtn.addEventListener('click', ()=>{ lockOverlay.style.display = 'none'; });
 
     document.getElementById('generate').addEventListener('click', ()=>{
       const ean = eanInput.value.trim();
@@ -235,7 +219,7 @@
 
       out.innerHTML = '<strong>Payload for Code128:</strong> <code>' + finalPayload + '</code>';
 
-      try{
+      try {
         JsBarcode('#barcode', finalPayload, {
           format: 'CODE128',
           displayValue: true,
@@ -244,11 +228,11 @@
           lineColor: "#000",
           background: "#fff"
         });
-      }catch(e){
+      } catch(e){
         out.innerText = 'Failed to render barcode: ' + e.message;
       }
       result.hidden = false;
     });
   </script>
 </body>
-</html>
+  </html>
