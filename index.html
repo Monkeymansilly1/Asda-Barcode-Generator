@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ASDA Code 128 Generator — Locked</title>
+  <title>ASDA 1p Generator</title>
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -18,7 +18,7 @@
       max-width: 220px;
       margin-bottom: 20px;
     }
-    input[type=text], input[type=password] {
+    input[type=text] {
       width: 100%;
       padding: 10px;
       font-size: 16px;
@@ -38,9 +38,10 @@
       background: #78BE20;
       color: #000;
       cursor: pointer;
-      transition: background 0.3s, color 0.3s;
+      transition: background 0.25s, color 0.25s;
     }
     button:hover { background: #000; color: #78BE20; }
+    #controls { display:flex; gap:8px; align-items:center; justify-content:flex-start; margin-top:8px; }
     #result {
       margin-top: 18px;
       padding: 14px;
@@ -49,68 +50,28 @@
       background: #fff;
       color: #000;
     }
-    .error { color: #a00; }
-    svg {
-      background: #fff;
-      padding: 6px;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-    .overlay {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.6);
-      z-index: 9999;
-    }
-    .locker {
-      background: #fff;
-      color: #000;
-      border: 3px solid #000;
-      padding: 18px;
-      width: 92%;
-      max-width: 420px;
-      border-radius: 10px;
-      text-align: left;
-    }
-    .locker h2 { margin: 0 0 8px 0; }
-    .locker .hint { font-size: 13px; color: #0008; margin-top:6px }
+    .error { color: #a00; font-weight:600; }
+    svg { background: #fff; padding: 6px; border-radius: 6px; margin-top: 10px; }
+    .payload { word-break: break-all; display:inline-block; margin-right:10px; }
   </style>
 </head>
 <body>
   <header>
-    <img src="Asda-Logo.png" 
-         alt="ASDA Logo" 
-         style="max-width:220px; height:auto; margin-bottom:20px; background:#fff; padding:10px; border-radius:8px;">
+    <img src="Asda-Logo.png" alt="ASDA Logo" style="max-width:220px; height:auto; margin-bottom:20px; background:#fff; padding:10px; border-radius:8px;">
   </header>
 
-  <h1>Asda 1p Generator</h1>
-
-  <!-- LOCK OVERLAY -->
-  <div id="lockOverlay" class="overlay" aria-hidden="false" role="dialog">
-    <div class="locker" role="document">
-      <h2>Unlock generator</h2>
-      <p>Enter the unlock key to use this generator.</p>
-      <label for="unlockKey">Key</label>
-      <input id="unlockKey" type="password" placeholder="Enter key (min 8 chars)" minlength="8">
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <button id="unlockBtn">Unlock</button>
-        <button id="cancelBtn" type="button">Cancel</button>
-      </div>
-      <div id="unlockMsg" class="error" style="margin-top:10px;display:none"></div>
-      <div class="hint">Key is case-sensitive, must be at least 8 characters.</div>
-    </div>
-  </div>
+  <h1>ASDA Code 128 Generator</h1>
 
   <label for="ean">Barcode number (8, 12 or 13 digits)</label>
-  <input id="ean" type="text" inputmode="numeric" minlength="8" maxlength="13" placeholder="e.g. 0123456789012" disabled>
+  <input id="ean" type="text" inputmode="numeric" minlength="8" maxlength="13" placeholder="e.g. 0123456789012">
 
-  <label for="serial">Serial / suffix (numeric)</label>
-  <input id="serial" type="text" inputmode="numeric" minlength="8" maxlength="20" placeholder="optional, default 000001196" disabled>
+  <label for="serial">Serial / suffix (numeric) — default: <code>000001196</code></label>
+  <input id="serial" type="text" inputmode="numeric" minlength="0" maxlength="20" placeholder="optional, default 000001196">
 
-  <button id="generate" disabled>Generate Code 128</button>
+  <div id="controls">
+    <button id="generate">Generate Code 128</button>
+    <button id="copy" type="button" style="background:#fff;color:#000;border:2px solid #000;">Copy payload</button>
+  </div>
 
   <div id="result" hidden>
     <div id="textOut"></div>
@@ -119,17 +80,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script>
-    // ✅ SHA-256 hash of "asdafan123"
-    const PASSWORD_HASH = "c791ad9c2c1a41ed069ad318f8c899b1af275cd329d3df2e0e3053701a3b19fc";
-    const STORAGE_KEY = 'asda_code128_unlocked';
-
-    // Hashing function
-    async function sha256hex(s){
-      const enc = new TextEncoder();
-      const digest = await crypto.subtle.digest('SHA-256', enc.encode(s));
-      return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,'0')).join('');
-    }
-
+    // Helpers
     function luhnCheckDigit(numberString){
       const digits = numberString.replace(/\D/g,'').split('').reverse().map(d=>parseInt(d,10));
       let sum = 0;
@@ -148,75 +99,26 @@
 
     function isDigits(s){ return /^\d+$/.test(s); }
 
-    const lockOverlay = document.getElementById('lockOverlay');
-    const unlockKeyInput = document.getElementById('unlockKey');
-    const unlockBtn = document.getElementById('unlockBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const unlockMsg = document.getElementById('unlockMsg');
-
+    // UI refs
     const eanInput = document.getElementById('ean');
     const serialInput = document.getElementById('serial');
     const generateBtn = document.getElementById('generate');
+    const copyBtn = document.getElementById('copy');
     const out = document.getElementById('textOut');
     const result = document.getElementById('result');
 
-    function setUnlocked(unlocked){
-      eanInput.disabled = !unlocked;
-      serialInput.disabled = !unlocked;
-      generateBtn.disabled = !unlocked;
-      lockOverlay.style.display = unlocked ? 'none' : 'flex';
-      lockOverlay.setAttribute('aria-hidden', unlocked ? 'true' : 'false');
-    }
-
-    try {
-      const was = localStorage.getItem(STORAGE_KEY);
-      if(was === '1'){ setUnlocked(true); }
-    } catch(e){}
-
-    async function tryUnlock(){
-  const val = unlockKeyInput.value.trim();
-  unlockMsg.style.display = 'none';
-
-  if(val.length < 8){
-    unlockMsg.style.display = 'block';
-    unlockMsg.textContent = 'Key must be at least 8 characters.';
-    return;
-  }
-
-  const got = await sha256hex(val);
-
-  // Show both values for debugging
-  unlockMsg.style.display = 'block';
-  unlockMsg.style.color = '#000'; // black for readability
-  unlockMsg.textContent = 'Computed: ' + got + '\nExpected: ' + PASSWORD_HASH;
-
-  if(got === PASSWORD_HASH){
-    try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
-    unlockMsg.style.display = 'none';
-    setUnlocked(true);
-    return;
-  }
-
-  // Fail case
-  unlockMsg.style.display = 'block';
-  unlockMsg.style.color = '#a00'; // red
-  unlockMsg.textContent += '\nInvalid key. Try again.';
-  unlockKeyInput.value = '';
-  unlockKeyInput.focus();
-    }
-    unlockBtn.addEventListener('click', tryUnlock);
-    unlockKeyInput.addEventListener('keydown', (ev)=>{ if(ev.key === 'Enter') tryUnlock(); });
-    cancelBtn.addEventListener('click', ()=>{ lockOverlay.style.display = 'none'; });
-
-    document.getElementById('generate').addEventListener('click', ()=>{
+    // Generate handler
+    generateBtn.addEventListener('click', ()=>{
       const ean = eanInput.value.trim();
       let serial = serialInput.value.trim();
 
+      // Validate barcode length: 8, 12 or 13 and digits only
       if(!(ean.length === 8 || ean.length === 12 || ean.length === 13) || !isDigits(ean)){
         out.innerHTML = '<div class="error">Please enter a valid barcode (8, 12, or 13 digits only).</div>';
         result.hidden = false;
         return;
       }
+
       if(serial === '') serial = '000001196';
       if(serial.length < 8 || !isDigits(serial)){
         out.innerHTML = '<div class="error">Serial must be at least 8 digits (numeric only).</div>';
@@ -229,9 +131,10 @@
       const checkDigit = luhnCheckDigit(base);
       const finalPayload = base + checkDigit;
 
-      out.innerHTML = '<strong>Payload for Code128:</strong> <code>' + finalPayload + '</code>';
+      out.innerHTML = '<strong>Payload for Code128:</strong> <div class="payload"><code>' + finalPayload + '</code></div>';
+      result.hidden = false;
 
-      try {
+      try{
         JsBarcode('#barcode', finalPayload, {
           format: 'CODE128',
           displayValue: true,
@@ -240,11 +143,35 @@
           lineColor: "#000",
           background: "#fff"
         });
-      } catch(e){
-        out.innerText = 'Failed to render barcode: ' + e.message;
+      }catch(e){
+        out.innerHTML += '<div class="error">Failed to render barcode: ' + e.message + '</div>';
       }
-      result.hidden = false;
+    });
+
+    // Copy payload button
+    copyBtn.addEventListener('click', ()=>{
+      const codeElem = out.querySelector('code');
+      if(!codeElem){
+        copyBtn.textContent = 'No payload';
+        setTimeout(()=> copyBtn.textContent = 'Copy payload', 1200);
+        return;
+      }
+      const text = codeElem.textContent;
+      navigator.clipboard?.writeText(text).then(()=> {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(()=> copyBtn.textContent = 'Copy payload', 1200);
+      }).catch(()=> {
+        copyBtn.textContent = 'Copy failed';
+        setTimeout(()=> copyBtn.textContent = 'Copy payload', 1200);
+      });
+    });
+
+    // Optional: press Enter in EAN or Serial to generate
+    [eanInput, serialInput].forEach(el=>{
+      el.addEventListener('keydown', (ev)=>{
+        if(ev.key === 'Enter') generateBtn.click();
+      });
     });
   </script>
 </body>
-  </html>
+</html>
