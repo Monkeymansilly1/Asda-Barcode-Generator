@@ -174,25 +174,36 @@
     } catch(e){}
 
     async function tryUnlock(){
-      const val = unlockKeyInput.value || '';
-      unlockMsg.style.display = 'none';
-      if(val.length < 8){
-        unlockMsg.style.display = 'block';
-        unlockMsg.textContent = 'Key must be at least 8 characters.';
-        return;
-      }
-      const got = await sha256hex(val);
-      if(got === PASSWORD_HASH){
-        try{ localStorage.setItem(STORAGE_KEY, '1'); }catch(e){}
-        setUnlocked(true);
-      } else {
-        unlockMsg.style.display = 'block';
-        unlockMsg.textContent = 'Invalid key. Try again.';
-        unlockKeyInput.value = '';
-        unlockKeyInput.focus();
-      }
-    }
+  const val = unlockKeyInput.value.trim();
+  unlockMsg.style.display = 'none';
 
+  if(val.length < 8){
+    unlockMsg.style.display = 'block';
+    unlockMsg.textContent = 'Key must be at least 8 characters.';
+    return;
+  }
+
+  const got = await sha256hex(val);
+
+  // Show both values for debugging
+  unlockMsg.style.display = 'block';
+  unlockMsg.style.color = '#000'; // black for readability
+  unlockMsg.textContent = 'Computed: ' + got + '\nExpected: ' + PASSWORD_HASH;
+
+  if(got === PASSWORD_HASH){
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
+    unlockMsg.style.display = 'none';
+    setUnlocked(true);
+    return;
+  }
+
+  // Fail case
+  unlockMsg.style.display = 'block';
+  unlockMsg.style.color = '#a00'; // red
+  unlockMsg.textContent += '\nInvalid key. Try again.';
+  unlockKeyInput.value = '';
+  unlockKeyInput.focus();
+    }
     unlockBtn.addEventListener('click', tryUnlock);
     unlockKeyInput.addEventListener('keydown', (ev)=>{ if(ev.key === 'Enter') tryUnlock(); });
     cancelBtn.addEventListener('click', ()=>{ lockOverlay.style.display = 'none'; });
