@@ -119,78 +119,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script>
-    
-<script>
-  // ✅ SHA-256 hash of "asdafan123"
-  const PASSWORD_HASH = "c791ad9c2c1a41ed069ad318f8c899b1af275cd329d3df2e0e3053701a3b19fc";
-  const STORAGE_KEY = "asda_code128_unlocked";
+    // ✅ SHA-256 hash of "asdafan123"
+    const PASSWORD_HASH = "c791ad9c2c1a41ed069ad318f8c899b1af275cd329d3df2e0e3053701a3b19fc";
+    const STORAGE_KEY = 'asda_code128_unlocked';
 
-  // 🔧 Compute SHA-256 hex of any string
-  async function sha256hex(s) {
-    const enc = new TextEncoder();
-    const digest = await crypto.subtle.digest("SHA-256", enc.encode(s));
-    return [...new Uint8Array(digest)]
-      .map(b => b.toString(16).padStart(2,"0"))
-      .join("");
-  }
-
-  // 🎛 UI references
-  const lockOverlay = document.getElementById("lockOverlay");
-  const unlockKeyInput = document.getElementById("unlockKey");
-  const unlockBtn = document.getElementById("unlockBtn");
-  const cancelBtn = document.getElementById("cancelBtn");
-  const unlockMsg = document.getElementById("unlockMsg");
-
-  const eanInput = document.getElementById("ean");
-  const serialInput = document.getElementById("serial");
-  const generateBtn = document.getElementById("generate");
-
-  // 🔓 Enable / disable generator
-  function setUnlocked(unlocked) {
-    eanInput.disabled = !unlocked;
-    serialInput.disabled = !unlocked;
-    generateBtn.disabled = !unlocked;
-    lockOverlay.style.display = unlocked ? "none" : "flex";
-    lockOverlay.setAttribute("aria-hidden", unlocked ? "true" : "false");
-  }
-
-  // 🗝️ Try to unlock
-  async function tryUnlock() {
-    const val = unlockKeyInput.value.trim();
-    unlockMsg.style.display = "none";
-
-    if (val.length >= 8) {
-      const got = await sha256hex(val); // hash user input
-
-      if (got === PASSWORD_HASH) {
-        try { localStorage.setItem(STORAGE_KEY, "1"); } catch(e){}
-        setUnlocked(true);
-        return;
-      }
-    }
-    // Fail case
-    unlockMsg.style.display = "block";
-    unlockMsg.textContent = "Invalid key. Must be at least 8 characters and match.";
-    unlockKeyInput.value = "";
-    unlockKeyInput.focus();
-  }
-
-  // 🎛 Event hooks
-  unlockBtn.addEventListener("click", tryUnlock);
-  unlockKeyInput.addEventListener("keydown", ev => {
-    if (ev.key === "Enter") tryUnlock();
-  });
-  cancelBtn.addEventListener("click", () => {
-    lockOverlay.style.display = "none";
-  });
-
-  // 📦 Auto-unlock if previously stored
-  try {
-    if (localStorage.getItem(STORAGE_KEY) === "1") {
-      setUnlocked(true);
-    }
-  } catch(e) {}
-</script>
+    // Hashing function
     async function sha256hex(s){
       const enc = new TextEncoder();
       const digest = await crypto.subtle.digest('SHA-256', enc.encode(s));
@@ -198,7 +131,7 @@
     }
 
     function luhnCheckDigit(numberString){
-      const digits = numberString.replace(/\\D/g,'').split('').reverse().map(d=>parseInt(d,10));
+      const digits = numberString.replace(/\D/g,'').split('').reverse().map(d=>parseInt(d,10));
       let sum = 0;
       for(let i=0;i<digits.length;i++){
         let d = digits[i];
@@ -213,7 +146,7 @@
       return String(check);
     }
 
-    function isDigits(s){return /^\\d+$/.test(s)}
+    function isDigits(s){ return /^\d+$/.test(s); }
 
     const lockOverlay = document.getElementById('lockOverlay');
     const unlockKeyInput = document.getElementById('unlockKey');
