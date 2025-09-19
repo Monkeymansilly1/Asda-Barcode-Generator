@@ -127,11 +127,18 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script>
-    const UNLOCK_KEY = 'asdafan123';
+    // SHA-256 hash of "asdafan123"
+    const PASSWORD_HASH = "3afc80299c6cbb7b27e95e59a2352eab6a2f91db551bb8da40144a91f54e87a7";
     const STORAGE_KEY = 'asda_code128_unlocked';
 
+    async function sha256hex(s){
+      const enc = new TextEncoder();
+      const digest = await crypto.subtle.digest('SHA-256', enc.encode(s));
+      return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
     function luhnCheckDigit(numberString){
-      const digits = numberString.replace(/\D/g,'').split('').reverse().map(d=>parseInt(d,10));
+      const digits = numberString.replace(/\\D/g,'').split('').reverse().map(d=>parseInt(d,10));
       let sum = 0;
       for(let i=0;i<digits.length;i++){
         let d = digits[i];
@@ -146,7 +153,7 @@
       return String(check);
     }
 
-    function isDigits(s){return /^\d+$/.test(s)}
+    function isDigits(s){return /^\\d+$/.test(s)}
 
     const lockOverlay = document.getElementById('lockOverlay');
     const unlockKeyInput = document.getElementById('unlockKey');
@@ -175,15 +182,23 @@
       }
     }catch(e){}
 
-    function tryUnlock(){
+    async function tryUnlock(){
       const val = unlockKeyInput.value || '';
       unlockMsg.style.display = 'none';
-      if(val.length >= 8 && val === UNLOCK_KEY){
+
+      if(val.length < 8){
+        unlockMsg.style.display = 'block';
+        unlockMsg.textContent = 'Key must be at least 8 characters.';
+        return;
+      }
+
+      const got = await sha256hex(val);
+      if(got === PASSWORD_HASH){
         try{ localStorage.setItem(STORAGE_KEY, '1'); }catch(e){}
         setUnlocked(true);
       }else{
         unlockMsg.style.display = 'block';
-        unlockMsg.textContent = 'Invalid key. Must be at least 8 characters and match.';
+        unlockMsg.textContent = 'Invalid key. Try again.';
         unlockKeyInput.value = '';
         unlockKeyInput.focus();
       }
