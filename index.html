@@ -1,10 +1,9 @@
 <!doctype html>
-
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ASDA Generator</title>
+  <title>ASDA Code 128 Generator — Locked</title>
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -94,30 +93,40 @@
       <text x="0" y="35" font-size="35" font-weight="bold" fill="#78BE20">ASDA</text>
     </svg>
   </header>
-  <h1>Asda Generator</h1>  <!-- LOCK OVERLAY -->  <div id="lockOverlay" class="overlay" aria-hidden="false" role="dialog">
+  <h1>Code 128 Generator</h1>
+
+  <!-- LOCK OVERLAY -->
+  <div id="lockOverlay" class="overlay" aria-hidden="false" role="dialog">
     <div class="locker" role="document">
       <h2>Unlock generator</h2>
       <p>Enter the unlock key to use this generator.</p>
       <label for="unlockKey">Key</label>
-      <input id="unlockKey" type="password" placeholder="Enter key">
+      <input id="unlockKey" type="password" placeholder="Enter key (min 8 chars)" minlength="8">
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button id="unlockBtn">Unlock</button>
         <button id="cancelBtn" type="button">Cancel</button>
       </div>
       <div id="unlockMsg" class="error" style="margin-top:10px;display:none"></div>
-      <div class="hint">Key is case-sensitive.</div>
+      <div class="hint">Key is case-sensitive, must be at least 8 characters.</div>
     </div>
-  </div><label for="ean">EAN‑13 barcode (13 digits)</label> <input id="ean" type="text" inputmode="numeric" maxlength="13" placeholder="e.g. 0123456789012" disabled>
+  </div>
 
-<label for="serial">Serial / suffix (numeric)</label> <input id="serial" type="text" inputmode="numeric" maxlength="20" placeholder="optional, default 000001196" disabled>
+  <label for="ean">Barcode number (8, 12 or 13 digits)</label>
+  <input id="ean" type="text" inputmode="numeric" minlength="8" maxlength="13" placeholder="e.g. 0123456789012" disabled>
 
-<button id="generate" disabled>Generate Code 128</button>
+  <label for="serial">Serial / suffix (numeric)</label>
+  <input id="serial" type="text" inputmode="numeric" minlength="8" maxlength="20" placeholder="optional, default 000001196" disabled>
+
+  <button id="generate" disabled>Generate Code 128</button>
 
   <div id="result" hidden>
     <div id="textOut"></div>
     <svg id="barcode"></svg>
-  </div>  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>  <script>
-    const UNLOCK_KEY = 'asdafan123'; // new all-lowercase key
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script>
+    const UNLOCK_KEY = 'asdafan123';
     const STORAGE_KEY = 'asda_code128_unlocked';
 
     function luhnCheckDigit(numberString){
@@ -168,12 +177,12 @@
     function tryUnlock(){
       const val = unlockKeyInput.value || '';
       unlockMsg.style.display = 'none';
-      if(val === UNLOCK_KEY){
+      if(val.length >= 8 && val === UNLOCK_KEY){
         try{ localStorage.setItem(STORAGE_KEY, '1'); }catch(e){}
         setUnlocked(true);
       }else{
         unlockMsg.style.display = 'block';
-        unlockMsg.textContent = 'Invalid key. Try again.';
+        unlockMsg.textContent = 'Invalid key. Must be at least 8 characters and match.';
         unlockKeyInput.value = '';
         unlockKeyInput.focus();
       }
@@ -192,14 +201,14 @@
       const ean = eanInput.value.trim();
       let serial = serialInput.value.trim();
 
-      if(ean.length !== 13 || !isDigits(ean)){
-        out.innerHTML = '<div class="error">Please enter a valid 13-digit EAN-13 barcode (digits only).</div>';
+      if(!(ean.length === 8 || ean.length === 12 || ean.length === 13) || !isDigits(ean)){
+        out.innerHTML = '<div class="error">Please enter a valid barcode (8, 12, or 13 digits only).</div>';
         result.hidden = false;
         return;
       }
       if(serial === '') serial = '000001196';
-      if(!isDigits(serial)){
-        out.innerHTML = '<div class="error">Serial must be numeric (digits only).</div>';
+      if(serial.length < 8 || !isDigits(serial)){
+        out.innerHTML = '<div class="error">Serial must be at least 8 digits (numeric only).</div>';
         result.hidden = false;
         return;
       }
@@ -225,5 +234,6 @@
       }
       result.hidden = false;
     });
-  </script></body>
-    </html>
+  </script>
+</body>
+</html>
