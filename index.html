@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ASDA 1p Generator</title>
+  <title>ASDA Code 128 Generator</title>
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -68,6 +68,9 @@
   <label for="serial">Serial / suffix (numeric) — default: <code>000001196</code></label>
   <input id="serial" type="text" inputmode="numeric" minlength="0" maxlength="20" placeholder="optional, default 000001196">
 
+  <label for="extra">Extra text (optional)</label>
+  <input id="extra" type="text" maxlength="50" placeholder="e.g. Product info, notes">
+
   <div id="controls">
     <button id="generate">Generate Code 128</button>
     <button id="copy" type="button" style="background:#fff;color:#000;border:2px solid #000;">Copy payload</button>
@@ -76,6 +79,7 @@
   <div id="result" hidden>
     <div id="textOut"></div>
     <svg id="barcode"></svg>
+    <div id="extraText" style="margin-top:12px;font-size:15px;color:#000;"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -97,11 +101,12 @@
       return String(check);
     }
 
-    function isDigits(s){ return /^\d+$/.test(s); }
+    function isDigits(s){ return /^\\d+$/.test(s); }
 
     // UI refs
     const eanInput = document.getElementById('ean');
     const serialInput = document.getElementById('serial');
+    const extraInput = document.getElementById('extra');
     const generateBtn = document.getElementById('generate');
     const copyBtn = document.getElementById('copy');
     const out = document.getElementById('textOut');
@@ -111,6 +116,7 @@
     generateBtn.addEventListener('click', ()=>{
       const ean = eanInput.value.trim();
       let serial = serialInput.value.trim();
+      const extraVal = extraInput.value.trim();
 
       // Validate barcode length: 8, 12 or 13 and digits only
       if(!(ean.length === 8 || ean.length === 12 || ean.length === 13) || !isDigits(ean)){
@@ -146,6 +152,9 @@
       }catch(e){
         out.innerHTML += '<div class="error">Failed to render barcode: ' + e.message + '</div>';
       }
+
+      // ✅ Display extra text under barcode
+      document.getElementById('extraText').textContent = extraVal ? extraVal : "";
     });
 
     // Copy payload button
@@ -166,12 +175,12 @@
       });
     });
 
-    // Optional: press Enter in EAN or Serial to generate
-    [eanInput, serialInput].forEach(el=>{
+    // Optional: press Enter in inputs to generate
+    [eanInput, serialInput, extraInput].forEach(el=>{
       el.addEventListener('keydown', (ev)=>{
         if(ev.key === 'Enter') generateBtn.click();
       });
     });
   </script>
 </body>
-</html>
+  </html>
