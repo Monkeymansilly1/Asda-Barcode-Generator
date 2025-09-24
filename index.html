@@ -18,7 +18,7 @@
       max-width: 220px;
       margin-bottom: 20px;
     }
-    input[type=text] {
+    input[type=text], input[type=password] {
       width: 100%;
       padding: 10px;
       font-size: 16px;
@@ -38,10 +38,9 @@
       background: #78BE20;
       color: #000;
       cursor: pointer;
-      transition: background 0.25s, color 0.25s;
+      transition: background 0.3s, color 0.3s;
     }
     button:hover { background: #000; color: #78BE20; }
-    #controls { display:flex; gap:8px; align-items:center; justify-content:flex-start; margin-top:8px; }
     #result {
       margin-top: 18px;
       padding: 14px;
@@ -50,14 +49,20 @@
       background: #fff;
       color: #000;
     }
-    .error { color: #a00; font-weight:600; }
-    svg { background: #fff; padding: 6px; border-radius: 6px; margin-top: 10px; }
-    .payload { word-break: break-all; display:inline-block; margin-right:10px; }
+    .error { color: #a00; }
+    svg {
+      background: #fff;
+      padding: 6px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <header>
-    <img src="Asda-Logo.png" alt="ASDA Logo" style="max-width:220px; height:auto; margin-bottom:20px; background:#fff; padding:10px; border-radius:8px;">
+    <img src="Asda-Logo.png" 
+         alt="ASDA Logo" 
+         style="max-width:220px; height:auto; margin-bottom:20px; background:#fff; padding:10px; border-radius:8px;">
   </header>
 
   <h1>ASDA Code 128 Generator</h1>
@@ -65,26 +70,23 @@
   <label for="ean">Barcode number (8, 12 or 13 digits)</label>
   <input id="ean" type="text" inputmode="numeric" minlength="8" maxlength="13" placeholder="e.g. 0123456789012">
 
-  <label for="serial">Serial / suffix (numeric) — default: <code>000001196</code></label>
-  <input id="serial" type="text" inputmode="numeric" minlength="0" maxlength="20" placeholder="optional, default 000001196">
+  <label for="serial">Serial / suffix (numeric) — default: 000001196</label>
+  <input id="serial" type="text" inputmode="numeric" minlength="1" maxlength="20" placeholder="optional, default 000001196">
 
-  <label for="extra">Extra text (optional)</label>
-  <input id="extra" type="text" maxlength="50" placeholder="e.g. Product info, notes">
+  <label for="extraText">Extra text (optional)</label>
+  <input id="extraText" type="text" placeholder="e.g. Product name or note">
 
-  <div id="controls">
-    <button id="generate">Generate Code 128</button>
-    <button id="copy" type="button" style="background:#fff;color:#000;border:2px solid #000;">Copy payload</button>
-  </div>
+  <button id="generate">Generate Code 128</button>
+  <button id="copyPayload">Copy payload</button>
 
   <div id="result" hidden>
     <div id="textOut"></div>
     <svg id="barcode"></svg>
-    <div id="extraText" style="margin-top:12px;font-size:15px;color:#000;"></div>
+    <div id="extraOut" style="margin-top:10px;font-weight:bold;"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script>
-    // Helpers
     function luhnCheckDigit(numberString){
       const digits = numberString.replace(/\D/g,'').split('').reverse().map(d=>parseInt(d,10));
       let sum = 0;
@@ -97,39 +99,42 @@
         sum += d;
       }
       const mod = sum % 10;
-      const check = (mod === 0) ? 0 : (10 - mod);
-      return String(check);
+      return (mod === 0) ? "0" : String(10 - mod);
     }
 
-    function isDigits(s){ return /^\\d+$/.test(s); }
+    function isDigits(s){ return /^\d+$/.test(s); }
 
-    // UI refs
     const eanInput = document.getElementById('ean');
     const serialInput = document.getElementById('serial');
-    const extraInput = document.getElementById('extra');
+    const extraInput = document.getElementById('extraText');
     const generateBtn = document.getElementById('generate');
-    const copyBtn = document.getElementById('copy');
+    const copyBtn = document.getElementById('copyPayload');
     const out = document.getElementById('textOut');
     const result = document.getElementById('result');
+    const extraOut = document.getElementById('extraOut');
 
-    // Generate handler
     generateBtn.addEventListener('click', ()=>{
       const ean = eanInput.value.trim();
       let serial = serialInput.value.trim();
-      const extraVal = extraInput.value.trim();
+      const extra = extraInput.value.trim();
 
-      // Validate barcode length: 8, 12 or 13 and digits only
+      // Validate barcode
       if(!(ean.length === 8 || ean.length === 12 || ean.length === 13) || !isDigits(ean)){
         out.innerHTML = '<div class="error">Please enter a valid barcode (8, 12, or 13 digits only).</div>';
         result.hidden = false;
         return;
       }
 
-      if(serial === '') serial = '000001196';
-      if(serial.length < 8 || !isDigits(serial)){
-        out.innerHTML = '<div class="error">Serial must be at least 8 digits (numeric only).</div>';
-        result.hidden = false;
-        return;
+      // ✅ Auto-pad serial to at least 8 digits
+      if(serial !== ""){
+        if(!isDigits(serial)){
+          out.innerHTML = '<div class="error">Serial must be numeric only.</div>';
+          result.hidden = false;
+          return;
+        }
+        serial = serial.padStart(8, '0');
+      } else {
+        serial = '000001196';
       }
 
       const prefix = '510';
@@ -137,10 +142,9 @@
       const checkDigit = luhnCheckDigit(base);
       const finalPayload = base + checkDigit;
 
-      out.innerHTML = '<strong>Payload for Code128:</strong> <div class="payload"><code>' + finalPayload + '</code></div>';
-      result.hidden = false;
+      out.innerHTML = '<strong>Payload for Code128:</strong> <code>' + finalPayload + '</code>';
 
-      try{
+      try {
         JsBarcode('#barcode', finalPayload, {
           format: 'CODE128',
           displayValue: true,
@@ -149,36 +153,19 @@
           lineColor: "#000",
           background: "#fff"
         });
-      }catch(e){
-        out.innerHTML += '<div class="error">Failed to render barcode: ' + e.message + '</div>';
+      } catch(e){
+        out.innerText = 'Failed to render barcode: ' + e.message;
       }
 
-      // ✅ Display extra text under barcode
-      document.getElementById('extraText').textContent = extraVal ? extraVal : "";
+      // Show extra text if provided
+      extraOut.textContent = extra !== "" ? extra : "";
+      result.hidden = false;
     });
 
-    // Copy payload button
     copyBtn.addEventListener('click', ()=>{
-      const codeElem = out.querySelector('code');
-      if(!codeElem){
-        copyBtn.textContent = 'No payload';
-        setTimeout(()=> copyBtn.textContent = 'Copy payload', 1200);
-        return;
-      }
-      const text = codeElem.textContent;
-      navigator.clipboard?.writeText(text).then(()=> {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(()=> copyBtn.textContent = 'Copy payload', 1200);
-      }).catch(()=> {
-        copyBtn.textContent = 'Copy failed';
-        setTimeout(()=> copyBtn.textContent = 'Copy payload', 1200);
-      });
-    });
-
-    // Optional: press Enter in inputs to generate
-    [eanInput, serialInput, extraInput].forEach(el=>{
-      el.addEventListener('keydown', (ev)=>{
-        if(ev.key === 'Enter') generateBtn.click();
+      const text = out.textContent.replace("Payload for Code128:", "").trim();
+      navigator.clipboard.writeText(text).then(()=>{
+        alert("Payload copied: " + text);
       });
     });
   </script>
