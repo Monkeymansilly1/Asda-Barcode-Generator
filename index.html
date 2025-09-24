@@ -125,14 +125,14 @@
         return;
       }
 
-      // ✅ Auto-pad serial to at least 8 digits
+      // ✅ Auto-pad serial to at least 9 digits
       if(serial !== ""){
         if(!isDigits(serial)){
           out.innerHTML = '<div class="error">Serial must be numeric only.</div>';
           result.hidden = false;
           return;
         }
-        serial = serial.padStart(8, '0');
+        serial = serial.padStart(9, '0');
       } else {
         serial = '000001196';
       }
